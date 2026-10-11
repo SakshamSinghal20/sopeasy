@@ -15,7 +15,7 @@ npm run dev
 
 Open http://localhost:4197. The current workspace already has a private `.env`. It is excluded from Git and Docker. Dependencies need Node 24 or newer for built-in SQLite.
 
-The local demo contains explicitly fictional people and procedures. Explore as Maya (Owner), Arjun (Author/reviewer), and Leena (Reader), using the role switcher. Demo access is disabled in production. Create an account and another workspace to start with an empty library.
+The local demo contains explicitly fictional people and procedures. Explore as Maya (Owner), Arjun (Author/reviewer), and Leena (Reader), using the role switcher. The normal production release disables demo access. The separate review build provides a disposable sandbox per browser. In the authenticated release, create an account and another workspace to start with an empty library.
 
 ## What works
 
