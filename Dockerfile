@@ -11,6 +11,7 @@ COPY --from=build /app/package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=build /app/server.mjs ./
 COPY --from=build /app/server ./server
+COPY --from=build /app/shared ./shared
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/scripts ./scripts
 RUN mkdir /data && chown node:node /data /app
