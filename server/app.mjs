@@ -8,6 +8,7 @@ import { resolve, join } from "node:path";
 import * as D from "./domain.mjs";
 import { digest, passwordHash, passwordValid } from "./db.mjs";
 import { reviewAccess } from "./review.mjs";
+import { aiProvider } from "./provider.mjs";
 import {
   generateProposal,
   AI_PROMPT_VERSION,
@@ -442,8 +443,8 @@ export function createApp(store, config = {}) {
   const aiDisabled =
     process.env.AI_DISABLED === "true" ||
     (prod && process.env.AI_DISABLED !== "false");
-  const aiAvailable =
-    !!(process.env.SARVAM_API_KEY || config.generate) && !aiDisabled;
+  const provider = aiProvider();
+  const aiAvailable = !!(provider.key || config.generate) && !aiDisabled;
   app.disable("x-powered-by");
   app.use(express.json({ limit: "3mb" }));
   app.use(cookieParser());
@@ -611,6 +612,8 @@ export function createApp(store, config = {}) {
       demo,
       review,
       ai: aiAvailable,
+      aiProvider: provider.name,
+      aiModel: provider.model,
       email: !!mailer,
     }),
   );
@@ -965,6 +968,8 @@ export function createApp(store, config = {}) {
         demo,
         review,
         ai: aiAvailable,
+        aiProvider: provider.name,
+        aiModel: provider.model,
         aiValidatorVersion: AI_VALIDATOR_VERSION,
         email: !!mailer,
       },
@@ -1432,9 +1437,9 @@ export function createApp(store, config = {}) {
           templateVersion: "office-v1",
           workingRevision: doc.candidate.revision,
           candidate: doc.candidate.id,
-          consent: { actor: m.id, time: D.now(), provider: "Sarvam" },
+          consent: { actor: m.id, time: D.now(), provider: provider.name },
           promptVersion: AI_PROMPT_VERSION,
-          model: process.env.SARVAM_CHAT_MODEL || "sarvam-105b",
+          model: provider.model,
         },
         section: section || null,
       };

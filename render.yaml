@@ -16,5 +16,9 @@ services:
         sync: false
       - key: AI_DISABLED
         value: "false"
-      - key: SARVAM_API_KEY
+      - key: AI_PROVIDER
+        value: "gemini"
+      - key: GEMINI_CHAT_MODEL
+        value: "gemini-3.8-flash"
+      - key: GEMINI_API_KEY
         sync: false

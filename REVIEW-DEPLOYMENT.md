@@ -15,7 +15,7 @@ Private source: https://github.com/SakshamSinghal20/sopeasy
 - GitHub: private repository; credentials, local SQLite databases, and QA artifacts are excluded.
 - Vercel: static Vite frontend. `/api/*` requests proxy to the Render service, preserving same-origin browser cookies.
 - Render: Docker Node 24 backend, `REVIEW_MODE=true`, `API_ONLY=true`, `DEMO_MODE=false`. No persistent disk is required for this disposable review build.
-- AI: server-side provider key only. The sample-data review caps the service at 50 AI requests per UTC day and three concurrent requests. Resetting a sandbox does not reset the service quota. Manual editing remains available.
+- AI: Gemini (`AI_PROVIDER=gemini`, `GEMINI_CHAT_MODEL=gemini-3.8-flash`), with `GEMINI_API_KEY` stored only in Render environment settings. Sarvam remains available through explicit provider selection. The sample-data review caps the service at 50 AI requests per UTC day and three concurrent requests. Resetting a sandbox does not reset the service quota. Manual editing remains available.
 - Email: disabled in the review build. Account verification, password reset, and invitations belong to the authenticated release.
 - CI: `npm run verify` on push and pull request.
 

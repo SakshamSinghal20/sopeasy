@@ -2817,11 +2817,12 @@ function Document({
     }
   }
   async function generate(section) {
-    const consentKey = `sopeasy-ai-consent:${data.workspace.id}:${data.user.id}:sarvam`;
+    const provider = data.config.aiProvider || "Sarvam";
+    const consentKey = `sopeasy-ai-consent:${data.workspace.id}:${data.user.id}:${provider}`;
     if (!sessionStorage.getItem(consentKey)) {
       if (
         !confirm(
-          "Prepare a proposal with Sarvam AI? This procedure’s saved source notes, resolved question answers, title, and working content will be sent to Sarvam. Check your organization’s provider privacy requirements before sending employee information.",
+          `Prepare a proposal with ${provider} AI? This procedure’s saved source notes, resolved question answers, title, and working content will be sent to ${provider}. Check your organization’s provider privacy requirements before sending employee information.`,
         )
       )
         return;
