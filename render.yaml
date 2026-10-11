@@ -2,7 +2,7 @@
 # Real team use requires REVIEW_MODE=false, SMTP, and a persistent disk.
 services:
   - type: web
-    name: sopeasy-api
+    name: sopeasy-review-api
     runtime: docker
     plan: free
     branch: main
@@ -15,4 +15,6 @@ services:
       - key: APP_URL
         sync: false
       - key: AI_DISABLED
-        value: "true"
+        value: "false"
+      - key: SARVAM_API_KEY
+        sync: false

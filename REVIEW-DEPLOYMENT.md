@@ -8,6 +8,10 @@ Your account menu offers **Start a fresh sandbox**. A sandbox expires after thre
 
 ## Hosting
 
+Frontend: https://sopeasy-review.vercel.app
+Backend health: https://sopeasy-review-api.onrender.com/api/health
+Private source: https://github.com/SakshamSinghal20/sopeasy
+
 - GitHub: private repository; credentials, local SQLite databases, and QA artifacts are excluded.
 - Vercel: static Vite frontend. `/api/*` requests proxy to the Render service, preserving same-origin browser cookies.
 - Render: Docker Node 24 backend, `REVIEW_MODE=true`, `API_ONLY=true`, `DEMO_MODE=false`. No persistent disk is required for this disposable review build.
