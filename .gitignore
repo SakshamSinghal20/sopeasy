@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+*.env
+!.env.example
+!*.env.example
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+data/
+.qa/
+*.log
+.impeccable/mocks/
+.gstack/
+artifacts/
+.vercel/

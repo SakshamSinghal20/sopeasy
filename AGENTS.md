@@ -1,0 +1,2 @@
+# SOPEasy implementation
+Read PRODUCT.md, DESIGN.md, and ../docs/sopeasy/PRD.md. Keep all work within this app. Never expose credentials or seed fictional accounts into production. Every transition must enforce workspace, role, revision, approval and current-version rules on the server. Run meaningful domain/API tests and build; inspect desktop and mobile once, fix discovered issues, confirm once.

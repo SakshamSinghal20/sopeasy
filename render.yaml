@@ -1,0 +1,18 @@
+# Review sandbox only: sample data is ephemeral on the free instance.
+# Real team use requires REVIEW_MODE=false, SMTP, and a persistent disk.
+services:
+  - type: web
+    name: sopeasy-api
+    runtime: docker
+    plan: free
+    branch: main
+    healthCheckPath: /api/health
+    envVars:
+      - key: REVIEW_MODE
+        value: "true"
+      - key: API_ONLY
+        value: "true"
+      - key: APP_URL
+        sync: false
+      - key: AI_DISABLED
+        value: "true"
