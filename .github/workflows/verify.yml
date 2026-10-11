@@ -19,7 +19,7 @@ jobs:
       - name: Start the actual review image and verify its API
         run: |
           docker run -d --name sopeasy-review -p 4197:4197 -e APP_URL=https://review.example.test -e REVIEW_MODE=true -e API_ONLY=true sopeasy-review
-          curl --retry 20 --retry-delay 2 --retry-connrefused --fail http://127.0.0.1:4197/api/health
+          curl --retry 20 --retry-delay 1 --retry-all-errors --fail http://127.0.0.1:4197/api/health
           curl --fail http://127.0.0.1:4197/api/config | python3 -c 'import sys,json; c=json.load(sys.stdin); assert c["review"] and c["demo"] and not c["ai"] and not c["email"]'
           curl --fail -H 'Content-Type: application/json' -H 'x-sopeasy-request: 1' -d '{}' http://127.0.0.1:4197/api/auth/review | python3 -c 'import sys,json; assert json.load(sys.stdin)["workspace"]'
       - if: failure()
