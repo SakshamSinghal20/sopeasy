@@ -11,7 +11,7 @@ Your account menu offers **Start a fresh sandbox**. A sandbox expires after thre
 - GitHub: private repository; credentials, local SQLite databases, and QA artifacts are excluded.
 - Vercel: static Vite frontend. `/api/*` requests proxy to the Render service, preserving same-origin browser cookies.
 - Render: Docker Node 24 backend, `REVIEW_MODE=true`, `API_ONLY=true`, `DEMO_MODE=false`. No persistent disk is required for this disposable review build.
-- AI: server-side provider key only. `AI_DISABLED=true` until the provider is configured for the sample-data review. Manual editing remains available.
+- AI: server-side provider key only. The sample-data review caps the service at 50 AI requests per UTC day and three concurrent requests. Resetting a sandbox does not reset the service quota. Manual editing remains available.
 - Email: disabled in the review build. Account verification, password reset, and invitations belong to the authenticated release.
 - CI: `npm run verify` on push and pull request.
 

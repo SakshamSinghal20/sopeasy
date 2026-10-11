@@ -377,7 +377,21 @@ export function createApp(store, config = {}) {
   const app = express();
   const prod = config.production ?? process.env.NODE_ENV === "production";
   const review = config.review ?? process.env.REVIEW_MODE === "true";
-  const sandbox = review ? reviewAccess(store, prod) : null;
+  const sandbox = review
+    ? reviewAccess(store, prod, (workspace) => {
+        for (const [job, execution] of runningGenerations.get(store) || []) {
+          if (execution.workspace === workspace) {
+            execution.controller.abort(
+              new DOMException(
+                "Review sandbox expired or was reset",
+                "AbortError",
+              ),
+            );
+            runningGenerations.get(store).delete(job);
+          }
+        }
+      })
+    : null;
   if (sandbox) reviewSandboxes.set(store, sandbox);
   const demo =
     review || (!prod && (config.demo ?? process.env.DEMO_MODE === "true"));
@@ -605,12 +619,10 @@ export function createApp(store, config = {}) {
       review &&
       !["/review", "/demo", "/logout", "/review-reset"].includes(req.path)
     )
-      return res
-        .status(403)
-        .json({
-          error:
-            "This review build uses sample roles. Account registration and email delivery are disabled.",
-        });
+      return res.status(403).json({
+        error:
+          "This review build uses sample roles. Account registration and email delivery are disabled.",
+      });
     next();
   });
   app.post("/api/auth/review", (req, res) => {
@@ -656,6 +668,14 @@ export function createApp(store, config = {}) {
           ?.people.find((p) => p.email.split("+")[0] === email.split("@")[0])
       : store.get("SELECT * FROM users WHERE email=?", email);
     D.need(user, "Open your review workspace first.", 404);
+    if (review)
+      D.need(
+        store
+          .members(sandbox.lookup(req).workspace)
+          .some((m) => m.user === user.id && m.active),
+        "This sample role is inactive. Return to the owner role or start a fresh sandbox.",
+        403,
+      );
     session(res, user);
     res.json({ ok: true });
   });
@@ -1380,6 +1400,14 @@ export function createApp(store, config = {}) {
         section || null,
         doc.proposals,
       );
+      if (review) {
+        D.need(
+          generationControllers.size < 3,
+          "The review build already has three active AI requests. Try again shortly.",
+          429,
+        );
+        sandbox.reserveAI();
+      }
       const p = {
         id: D.id(),
         key: key || null,
@@ -1519,12 +1547,10 @@ export function createApp(store, config = {}) {
   });
   app.post("/api/w/:wid/invites", async (req, res, next) => {
     if (review)
-      return res
-        .status(403)
-        .json({
-          error:
-            "Email invitations are disabled in this review build. Use Switch demo role to try reviewer and reader access.",
-        });
+      return res.status(403).json({
+        error:
+          "Email invitations are disabled in this review build. Use Switch demo role to try reviewer and reader access.",
+      });
     try {
       D.need(D.admin(req.member), "Only administrators invite members.", 403);
       const email = String(req.body.email || "")

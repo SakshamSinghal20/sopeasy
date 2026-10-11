@@ -63,6 +63,16 @@ test("review access opens isolated sample workspaces, enforces roles, and resets
   assert.equal(first.workspace.member.role, "Owner");
   assert.equal(first.config.review, true);
   assert.equal(first.documents.length, 10);
+  const sampleAuthor = f.store
+    .members(first.workspace.id)
+    .find((m) => m.role === "Author");
+  f.store.run("UPDATE memberships SET active=0 WHERE id=?", sampleAuthor.id);
+  assert.equal(
+    (await a("/api/auth/demo", { email: "arjun@sopeasy.example" })).status,
+    403,
+  );
+  assert.equal((await a("/api/bootstrap")).body.workspace.member.role, "Owner");
+  f.store.run("UPDATE memberships SET active=1 WHERE id=?", sampleAuthor.id);
   assert.equal(
     (await a("/api/auth/register", { email: "real@example.test" })).status,
     403,

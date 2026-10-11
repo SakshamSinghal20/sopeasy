@@ -4,10 +4,13 @@ import { digest, seed } from "./db.mjs";
 const lifetime = 3 * 86400000;
 // Separate sample workspaces per browser. The capability stays in an HttpOnly
 // cookie; switching a sample role never grants access to another visitor.
-export function reviewAccess(store, secure) {
+export function reviewAccess(store, secure, beforeRemove = () => {}) {
   store.db.exec(`CREATE TABLE IF NOT EXISTS review_visits(
     token TEXT PRIMARY KEY, workspace TEXT NOT NULL, people TEXT NOT NULL,
     expires TEXT NOT NULL)`);
+  store.db.exec(
+    "CREATE TABLE IF NOT EXISTS review_ai_usage(day TEXT PRIMARY KEY, count INTEGER NOT NULL)",
+  );
   function lookup(req) {
     const row = store.get(
       "SELECT * FROM review_visits WHERE token=? AND expires>?",
@@ -19,6 +22,7 @@ export function reviewAccess(store, secure) {
       : null;
   }
   function remove(row) {
+    beforeRemove(row.workspace);
     store.db.exec("BEGIN IMMEDIATE");
     try {
       store.run("DELETE FROM workspaces WHERE id=?", row.workspace);
@@ -74,6 +78,24 @@ export function reviewAccess(store, secure) {
     lookup,
     open,
     cleanup,
+    reserveAI() {
+      const day = new Date().toISOString().slice(0, 10);
+      const count =
+        store.get("SELECT count FROM review_ai_usage WHERE day=?", day)
+          ?.count || 0;
+      if (count >= 50) {
+        const error = new Error(
+          "The review build has reached its daily limit of 50 AI requests. Continue editing manually or try again tomorrow.",
+        );
+        error.status = 429;
+        throw error;
+      }
+      store.run(
+        "INSERT INTO review_ai_usage VALUES(?,1) ON CONFLICT(day) DO UPDATE SET count=count+1",
+        day,
+      );
+      store.run("DELETE FROM review_ai_usage WHERE day<?", day);
+    },
     reset(req, res) {
       const visit = lookup(req);
       if (visit) remove({ ...visit, people: JSON.stringify(visit.people) });

@@ -530,8 +530,66 @@ export default function App() {
         <CircleNotch className="spin" size={26} />
       </div>
     );
+  if (!data && !Object.hasOwn(config, "demo") && error)
+    return (
+      <div className="recovery">
+        <Logo />
+        <h1>SOPEasy is waking up.</h1>
+        <p>The review server may need a moment to start. Please try again.</p>
+        <Button onClick={() => location.reload()}>Try again</Button>
+      </div>
+    );
+  if (!data && config.review)
+    return (
+      <div className="recovery">
+        <Logo />
+        <h1>Open your review sandbox.</h1>
+        <p>
+          Your review session may have expired. You can start again without
+          signing in.
+        </p>
+        {error && <p role="alert">{error}</p>}
+        <Button
+          onClick={async () => {
+            try {
+              const opened = await request("/api/auth/review", {});
+              sessionStorage.removeItem("sopeasy_workspace");
+              setActiveWorkspace(opened.workspace);
+              history.replaceState(null, "", "/");
+              await refresh(opened.workspace);
+            } catch (e) {
+              setError(e.message);
+            }
+          }}
+        >
+          Open sandbox
+        </Button>
+      </div>
+    );
   if (!data)
     return <Auth config={config} onSuccess={() => refresh()} error={error} />;
+  if (!data.workspace)
+    if (config.review)
+      return (
+        <div className="recovery">
+          <Logo />
+          <h1>Your sample workspace needs a fresh start.</h1>
+          <p>
+            Use a new sandbox to continue the review without creating an
+            account.
+          </p>
+          <Button
+            onClick={async () => {
+              await request("/api/auth/review-reset", {});
+              sessionStorage.removeItem("sopeasy_workspace");
+              history.replaceState(null, "", "/");
+              location.reload();
+            }}
+          >
+            Open a fresh sandbox
+          </Button>
+        </div>
+      );
   if (!data.workspace)
     return (
       <Onboarding user={data.user} onCreated={(id) => switchWorkspace(id)} />
@@ -4045,6 +4103,13 @@ function DocumentDialog({
   if (type === "options")
     return (
       <Dialog title="Procedure actions" onClose={close}>
+        {data.config?.review && (
+          <p>
+            Procedure links work within your browser’s sandbox. To invite
+            someone to try SOPEasy, share the review home link or send an
+            exported PDF.
+          </p>
+        )}
         <div className="action-menu">
           {doc.current && !doc.archived && (
             <button
