@@ -142,3 +142,30 @@ test("Gemini rejects endpoint injection and handles rejected credentials", async
     /provider could not complete/,
   );
 });
+
+test("Gemini bounds overload retries and cancellation interrupts retry backoff", async () => {
+  let calls = 0;
+  await assert.rejects(
+    generateGroundedProposal(input, {
+      provider: "gemini",
+      key: "test",
+      fetch: async () => {
+        calls++;
+        return { ok: false, status: 503 };
+      },
+    }),
+    /provider could not complete/,
+  );
+  assert.equal(calls, 4);
+  const controller = new AbortController();
+  const pending = generateGroundedProposal(input, {
+    provider: "gemini",
+    key: "test",
+    signal: controller.signal,
+    fetch: async () => {
+      setTimeout(() => controller.abort(), 10);
+      return { ok: false, status: 503 };
+    },
+  });
+  await assert.rejects(pending, /aborted/i);
+});
