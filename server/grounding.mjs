@@ -6,7 +6,7 @@ import {
   definitiveResolution,
 } from "./domain.mjs";
 
-export const GROUNDING_VERSION = "evidence-layout-v5";
+export const GROUNDING_VERSION = "evidence-layout-v6";
 export const fields = [
   "purpose",
   "scope",
@@ -50,13 +50,34 @@ export function isEmbeddedCommand(text) {
 }
 
 const segmenter = new Intl.Segmenter("en", { granularity: "sentence" });
-const labelPattern =
-  /^(Purpose|Scope|Responsibilities|Prerequisites|Exception(?:s)?|Completion|Checklist):\s*/i;
+const sectionLabels =
+  "Purpose|Scope|Responsibilities|Prerequisites|Steps?|Exception(?:s)?|Completion(?:\\s+checks)?|Checklist";
+const labelPattern = new RegExp(`^(${sectionLabels}):\\s*`, "i");
+const headingPattern = new RegExp(`^(${sectionLabels})\\s*:?$`, "i");
 const labelField = (label) =>
-  ({ exception: "exceptions", exceptions: "exceptions" })[
-    label.toLowerCase()
-  ] || label.toLowerCase();
+  ({
+    exception: "exceptions",
+    exceptions: "exceptions",
+    step: "steps",
+    "completion checks": "completion",
+  })[label.toLowerCase().replace(/\s+/g, " ")] || label.toLowerCase();
 const captureText = (text) => text.replace(/^(?:[-*•]\s+|\d{1,3}[.)]\s+)/, "");
+function sectionHeading(text) {
+  const markdown = /^#{1,6}\s+/.test(text);
+  const plain = text
+    .replace(/^#{1,6}\s+/, "")
+    .replace(/\s+#+\s*$/, "")
+    .replace(/:\s*$/, "")
+    .replace(/^(\*\*|__|\*|_)(.+)\1$/, "$2")
+    .trim();
+  const label = plain.match(headingPattern);
+  if (label) return { field: labelField(label[1]) };
+  // An unrelated heading ends the preceding section without turning its title
+  // into an office instruction. Plain headings must occupy a whole label line.
+  if (markdown || /^[\p{L}][\p{L}\p{N} &/-]{0,79}:\s*$/u.test(text))
+    return { field: null };
+  return null;
+}
 function inferredField(text) {
   // Failure branches belong in escalation; an ordinary business branch (for
   // example, issuing equipment if approved) remains an executable step.
@@ -175,6 +196,7 @@ export function evidenceClauses(
     [...priorRewriteSources, ...rewriteSources].map((c) => [c.sourceId, c]),
   );
   const clauses = [];
+  let inheritedField = null;
   for (const block of blocks) {
     if (supersededSourceIds.includes(block.id)) continue;
     const decision = decisions.get(block.id),
@@ -195,6 +217,13 @@ export function evidenceClauses(
     }
     need(typeof text === "string", "Invalid source evidence.", 502);
     text = captureText(text);
+    if (!decision && !authored) {
+      const heading = sectionHeading(text);
+      if (heading) {
+        inheritedField = heading.field;
+        continue;
+      }
+    }
     const label = text.match(labelPattern);
     const field = authored
       ? authored.path?.split(".")[0]
@@ -220,7 +249,13 @@ export function evidenceClauses(
         sourceId: block.id,
         supportSourceIds,
         text: value,
-        field: fields.includes(field) ? field : inferredField(value),
+        field: fields.includes(field)
+          ? field
+          : !decision && !authored && inheritedField
+            ? inheritedField === "steps"
+              ? inferredField(value) || inheritedField
+              : inheritedField
+            : inferredField(value),
         order: clauses.length,
         decision: Boolean(decision),
         working: Boolean(authored),

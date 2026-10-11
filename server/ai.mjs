@@ -1,6 +1,6 @@
 import { need, contentCheck, sourceBlocks, id } from "./domain.mjs";
 export const AI_PROMPT_VERSION = "office-sop-v6";
-export const AI_VALIDATOR_VERSION = "evidence-layout-v5";
+export const AI_VALIDATOR_VERSION = GROUNDING_VERSION;
 const sectionNames = [
   "purpose",
   "scope",
@@ -283,7 +283,7 @@ export function guardSourceFacts(proposal, sources, { section = false } = {}) {
 }
 
 export { generateGroundedProposal as generateProposal } from "./generate.mjs";
-import { validateGroundedProposal } from "./grounding.mjs";
+import { GROUNDING_VERSION, validateGroundedProposal } from "./grounding.mjs";
 export function validateGeneratedProposal(proposal, sources, options = {}) {
   need(
     proposal && typeof proposal === "object",

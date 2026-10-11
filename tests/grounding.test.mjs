@@ -16,6 +16,206 @@ const meetingRoomNotes = [
   "If the screen does not work, the office coordinator contacts IT and tells the meeting organizer.",
   "Completion: The meeting organizer has received the room-ready confirmation.",
 ];
+const headedNotes = [
+  "## Purpose",
+  "Prepare the room for the office meeting.",
+  "Steps:",
+  "1. The office coordinator checks the room booking.",
+  "2. The office coordinator tests the screen.",
+  "If the screen is unavailable, the office coordinator contacts IT.",
+  "**Completion checks:**",
+  "The office coordinator confirms the room is ready.",
+  "The booking is recorded.",
+  "## Other notes",
+  "The employee emails HR.",
+  "Checklist:",
+  "The office coordinator records the checklist.",
+];
+
+test("standalone plain and Markdown headings scope evidence without becoming executable steps", () => {
+  const sources = headedNotes.join("\n");
+  const clauses = evidenceClauses(sources);
+  assert.deepEqual(
+    clauses.map((clause) => clause.sourceId),
+    ["S2", "S4", "S5", "S6", "S8", "S9", "S11", "S13"],
+  );
+  const adversarial = {
+    ...plan(),
+    placements: clauses.map((clause) => ({
+      clauseId: clause.id,
+      section: "steps",
+    })),
+  };
+  const output = materializeLayout(adversarial, sources);
+  assert.deepEqual(
+    output.content.steps.map((step) => step.body),
+    [
+      "The office coordinator checks the room booking.",
+      "The office coordinator tests the screen.",
+      "The employee emails HR.",
+    ],
+  );
+  assert.equal(output.content.exceptions, headedNotes[5]);
+  assert.equal(output.content.completion, headedNotes.slice(7, 9).join("\n"));
+  assert.deepEqual(output.content.checklist, [headedNotes[12]]);
+  assert.deepEqual(
+    output.sourceRefs.find((ref) => ref.field === "completion").sourceIds,
+    ["S8", "S9"],
+  );
+  assert.deepEqual(
+    output.sourceRefs.find((ref) => ref.field === "exceptions").sourceIds,
+    ["S6"],
+  );
+  assert.deepEqual(
+    output.sourceRefs
+      .filter((ref) => /^steps\.\d+$/.test(ref.field))
+      .map((ref) => ref.sourceIds),
+    [["S4"], ["S5"], ["S11"]],
+  );
+  assert.ok(
+    output.sourceRefs.every(
+      (ref) =>
+        !ref.sourceIds.some((id) =>
+          ["S1", "S3", "S7", "S10", "S12"].includes(id),
+        ),
+    ),
+  );
+  assert.equal(validateGroundedProposal(output, sources), output);
+  // Heading IDs are absent from the provider's evidence input. A forged
+  // provider placement targeting one must be rejected, never become a step.
+  assert.throws(
+    () =>
+      materializeLayout(
+        { ...plan(), placements: [{ clauseId: "S3.C1", section: "steps" }] },
+        sources,
+      ),
+    /invalid evidence/,
+  );
+});
+
+test("a steps rewrite keeps headed completion and failure branches out and retains source references", () => {
+  const sources = headedNotes.join("\n");
+  const baseline = {
+    purpose: "Keep purpose",
+    scope: "Keep scope",
+    responsibilities: "Keep responsibilities",
+    prerequisites: "Keep prerequisites",
+    exceptions: "Keep exceptions",
+    completion: "Keep completion",
+    steps: [],
+    checklist: ["Keep checklist"],
+  };
+  const options = { section: "steps", content: baseline };
+  const output = materializeLayout(
+    {
+      ...plan(),
+      placements: evidenceClauses(sources).map((clause) => ({
+        clauseId: clause.id,
+        section: "steps",
+      })),
+    },
+    sources,
+    options,
+  );
+  assert.deepEqual(
+    output.content.steps.map((step) => step.body),
+    [
+      "The office coordinator checks the room booking.",
+      "The office coordinator tests the screen.",
+      "The employee emails HR.",
+    ],
+  );
+  for (const field of Object.keys(baseline).filter(
+    (field) => field !== "steps",
+  ))
+    assert.deepEqual(output.content[field], baseline[field]);
+  assert.deepEqual(
+    output.sourceRefs.map((ref) => ref.sourceIds),
+    [["S4"], ["S5"], ["S11"]],
+  );
+  assert.equal(validateGroundedProposal(output, sources, options), output);
+});
+
+test("inline section aliases do not persist into later process lines and explicit ownership wins", () => {
+  const sources = [
+    "Exceptions: If the laptop is missing, HR contacts IT.",
+    "HR emails the employee.",
+    "Completion checks: HR confirms the handover.",
+    "IT records the asset number.",
+    "Steps: If the laptop is unavailable, IT contacts Finance.",
+    "The employee signs the register.",
+  ].join("\n");
+  const output = materializeLayout(plan(), sources);
+  assert.deepEqual(
+    output.content.steps.map((step) => step.body),
+    [
+      "HR emails the employee.",
+      "IT records the asset number.",
+      "If the laptop is unavailable, IT contacts Finance.",
+      "The employee signs the register.",
+    ],
+  );
+  assert.equal(
+    output.content.exceptions,
+    "If the laptop is missing, HR contacts IT.",
+  );
+  assert.equal(output.content.completion, "HR confirms the handover.");
+  assert.equal(validateGroundedProposal(output, sources), output);
+});
+
+test("source heading scope does not override trusted rewrite paths or author decisions", () => {
+  const sources = [
+    "Completion checks:",
+    "The employee has received the laptop.",
+    "Author working steps steps.0.body: HR verifies the asset number.",
+    "Author clarification: IT records the assigned employee.",
+  ].join("\n");
+  const options = {
+    priorRewriteSources: [
+      {
+        sourceId: "S3",
+        path: "steps.0.body",
+        text: "HR verifies the asset number.",
+      },
+    ],
+    clarifications: [
+      {
+        sourceId: "S4",
+        sourceIds: ["S2"],
+        kind: "missing",
+        field: "steps",
+        question: "Who records the assigned employee?",
+        answer: "IT records the assigned employee.",
+      },
+    ],
+  };
+  const clauses = evidenceClauses(sources, options);
+  assert.equal(
+    clauses.find((clause) => clause.sourceId === "S3").field,
+    "steps",
+  );
+  assert.equal(clauses.find((clause) => clause.sourceId === "S4").field, null);
+  const output = materializeLayout(plan(), sources, options);
+  assert.deepEqual(
+    output.content.steps.map((step) => step.body),
+    ["HR verifies the asset number.", "IT records the assigned employee."],
+  );
+  assert.equal(
+    output.content.completion,
+    "The employee has received the laptop.",
+  );
+  assert.ok(
+    output.sourceRefs.some(
+      (ref) => ref.field === "steps.0" && ref.sourceIds.includes("S3"),
+    ),
+  );
+  assert.ok(
+    output.sourceRefs.some(
+      (ref) => ref.field === "steps.1" && ref.sourceIds.includes("S4"),
+    ),
+  );
+  assert.equal(validateGroundedProposal(output, sources, options), output);
+});
 test("meeting-room drafting keeps exceptions and completion out of its four normal steps", () => {
   const sources = meetingRoomNotes.join("\n");
   // A provider may repeat a clause across sections or omit its placement.
