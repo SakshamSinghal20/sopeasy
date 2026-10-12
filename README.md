@@ -1,97 +1,118 @@
 # SOPEasy
 
-A complete office operations and HR onboarding SOP workspace, built from the PRD. React 19, Node 24, Express, and persistent SQLite. The interface follows the Process Atlas direction in [DESIGN.md](DESIGN.md).
+Turn process notes into procedures your team can review, publish and acknowledge.
 
-The no-sign-in team review deployment uses isolated, disposable sample workspaces. Read [REVIEW-DEPLOYMENT.md](REVIEW-DEPLOYMENT.md) for its workflow and limits. Real company use requires the authenticated release and persistent storage.
+SOPEasy is an office operations and HR workspace. AI helps organize the draft; the process owner and a separate reviewer control what the team receives.
+
+[Open the team review app](https://sopeasy-review.vercel.app/) · [Deployment guide](REVIEW-DEPLOYMENT.md) · [Implementation notes](IMPLEMENTATION.md)
+
+![SOPEasy workspace with simple navigation](docs/images/sopeasy-overview.png)
+
+## The workflow
+
+1. **Create:** Add a title and process notes. Draft manually or prepare an AI proposal.
+2. **Review:** Edit the draft and send it to a reviewer who has not edited it. The reviewer can approve it or request changes.
+3. **Publish:** Publish the approved revision and assign the current version to readers.
+4. **Acknowledge:** Readers confirm that they have read that version. Owners can inspect receipts and export a report.
+
+Changes start a new working revision. The published version remains available while the next revision goes through review.
+
+## Features
+
+- Procedure templates, source notes, ordered steps and checklists.
+- Gemini or Sarvam proposals, section rewrites, source references and questions for unresolved facts.
+- Autosave, checkpoints and recovery when a saved revision changes.
+- Independent approval, numbered publication history and version-specific acknowledgements.
+- Search, reading assignments, maintenance dates, archive and restoration.
+- PDF export, acknowledgement CSV and workspace JSON export.
+
+The interface keeps **Home, Procedures, My tasks and Reviews** visible. Secondary tools sit under **More**. the SOPEasy palette, Space Grotesk headings and Inter body text carry through desktop and mobile.
+
+## Engineering approach
+
+The backend enforces the procedure lifecycle through explicit state transitions and validation. These checks run on the server, including when a caller sends requests directly to the API.
+
+| Rule                                                               | Implementation                                                                                          |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| Restrict actions to the right workspace and role                   | [API access checks](server/app.mjs) and [domain permissions](server/domain.mjs)                         |
+| Prevent editors from approving their own changes                   | [Review rules](server/domain.mjs)                                                                       |
+| Publish only the exact approved revision                           | [Publication rules](server/domain.mjs), content hashes and transactional updates                        |
+| Tie reading receipts to a person and published version             | [Acknowledgement rules](server/domain.mjs)                                                              |
+| Validate AI output against saved source evidence before acceptance | [Grounding](server/grounding.mjs), [proposal validation](server/ai.mjs) and immutable request snapshots |
+
+AI proposes how to organize supplied evidence. The application constructs procedure text from that evidence and validates the proposal before acceptance. Exceptions and completion checks remain separate from operational steps. Conflicting instructions require clarification; AI cannot approve, publish or acknowledge a procedure.
+
+## Stack
+
+| Layer    | Technology                                             |
+| -------- | ------------------------------------------------------ |
+| Frontend | React 19, Vite, Phosphor icons                         |
+| Backend  | Node.js 24+, Express                                   |
+| Database | SQLite, using Node's built-in SQLite API               |
+| AI       | Gemini or Sarvam, configured on the server             |
+| Hosting  | Vercel frontend with `/api` requests proxied to Render |
 
 ## Run locally
 
-```powershell
+You need **Node.js 24 or newer**.
+
+```bash
+git clone https://github.com/SakshamSinghal20/sopeasy.git
 cd sopeasy
-npm install
-Copy-Item .env.example .env # only for a fresh setup; preserve an existing .env
+npm ci
+```
+
+Copy `.env.example` to `.env` for a fresh setup. Preserve an existing `.env`.
+
+```powershell
+Copy-Item .env.example .env
 npm run dev
 ```
 
-Open http://localhost:4197. The current workspace already has a private `.env`. It is excluded from Git and Docker. Dependencies need Node 24 or newer for built-in SQLite.
+Open [localhost:4197](http://localhost:4197). The local demo uses fictional people: Maya is the owner, Arjun is the reviewer, and Leena is the reader. Use the role switcher to test the lifecycle.
 
-The local demo contains explicitly fictional people and procedures. Explore as Maya (Owner), Arjun (Author/reviewer), and Leena (Reader), using the role switcher. The normal production release disables demo access. The separate review build provides a disposable sandbox per browser. In the authenticated release, create an account and another workspace to start with an empty library.
+### Enable AI
 
-## What works
+For Gemini, set these values in the backend's private environment:
 
-- Email verification, password sign-in, password reset, expiring invitations, workspace switching, and four server-enforced roles.
-- Four starter templates and blank documents; guided capture and separately retained source notes.
-- Structured drafting, paragraphs, emphasis, bullets, simple pipe tables, ordered steps, checklists, autosave, revision conflict recovery, and checkpoints.
-- Live Gemini or Sarvam draft and section-rewrite proposals, preview/acceptance, source references, blocking questions, cancellation, stale-proposal checks, quotas, bounded provider retry, and manual fallback.
-- A distinct eligible reviewer; locked submission snapshots, change requests, revision-bound approval, and invalidation after edits or reviewer removal.
-- Atomic, idempotent publication; immutable numbered history; internal authenticated links; maintenance dates; all-team or selected reading assignments.
-- Version-specific acknowledgements and receipts; overdue status; reminder notifications; operational dashboards and reports.
-- Paginated library and search with permission checks and filters; document duplication, ownership transfer, archive, and restoration requiring fresh publication.
-- Workspace logo/name/timezone settings; PDF, acknowledgement CSV, workspace JSON exports; seven-day deletion recovery; purge completion records.
-- Daily SQLite backups, 30-day backup retention, restart recovery for interrupted AI jobs, and a deployment health endpoint.
-
-## Verification
-
-```powershell
-npm test
-npm run build
-npm run backup
-node scripts/benchmark.mjs
-node scripts/evaluate-ai.mjs --list
-node scripts/evaluate-ai.mjs --self-test
-node scripts/evaluate-ai.mjs --live
-node scripts/evaluate-ai.mjs --live --rewrites
+```dotenv
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your-provider-key
+AI_DISABLED=false
 ```
 
-The integration and domain suite exercises the complete manual and grounded AI loops, tenant permissions, concurrent edits, review locks, invalid approval, duplicate publication, old-version receipt races, archive/restoration, exports, identity tokens, deletion/recovery, AI failure/cancellation/staleness, provenance validation, reminders, durable reopening, and backup restoration. The evaluation script requires `--live` to call the real provider against 30 diverse fictional fixtures or six section rewrites; it can incur provider usage charges and runs at most three requests concurrently. `--smoke` selects a compact subset. `--replay <evaluation.json>` rerenders saved provider layouts with zero provider calls; replay does not measure live provider latency. Reports and browser screenshots are saved privately in `.qa/`. [IMPLEMENTATION.md](IMPLEMENTATION.md) maps the implementation to the PRD acceptance scenarios and records the remaining deployment gates.
+For Sarvam, use `AI_PROVIDER=sarvam` and `SARVAM_API_KEY`. Manual drafting works without a provider key. Keep keys on the backend and outside version control. See [.env.example](.env.example) for model and token settings.
 
-The browser exercise completes AI generation, clarification/regeneration, proposal acceptance, section rewriting, cancellation, checkpoint recovery, autosave during delayed responses, separate-account review, publication, and reader acknowledgement. The final fictional test procedure is archived with its exact-version receipt retained. Editor, review dialog, and desktop/mobile reader axe scans found no tested violations; layouts at 360px and 640×450 had no horizontal overflow. The responsive interface respects reduced-motion settings and uses self-hosted fonts. This is not a claim of a full independent accessibility certification or an uptime SLA.
+### Check the implementation
 
-The local performance harness uses 50 active memberships, 1,000 procedures, and ten independently signed-in clients. Across 100 requests per category, measured p95 was 219 ms for a paginated library, 231 ms for search, and 508 ms for autosave. This excludes browser rendering and real broadband latency.
-
-## Provider and email configuration
-
-Set `AI_PROVIDER=gemini` and `GEMINI_API_KEY` on the server to enable Gemini. `GEMINI_CHAT_MODEL` defaults to `gemini-3.8-flash`; `GEMINI_MAX_TOKENS` defaults to 8192. For Sarvam, set `AI_PROVIDER=sarvam` and `SARVAM_API_KEY`; `SARVAM_CHAT_MODEL` defaults to `sarvam-105b` and `SARVAM_MAX_TOKENS` to 4096. Omitting `AI_PROVIDER` keeps the existing Sarvam default. Selection is explicit: a missing key does not silently send data to another provider. Set `AI_DISABLED=true` to retain manual workflows while disabling generation. Explicit consent names the selected provider before sending this procedure’s title, vetted process clauses, saved author clarifications, and authored target section. No other workspace documents are sent. Keys are never included in client bundles or exports.
-
-Both providers use structured JSON output with independent application validation. Sarvam disables reasoning; Gemini thought parts are excluded from proposals. Gemini uses a compact schema without large array bounds; the application still enforces output limits and source fidelity. This follows [Sarvam's documented structured-output contract](https://docs.sarvam.ai/api/api-guides-tutorials/chat-completion/overview). AI proposes an evidence layout rather than writing new policy claims. The application constructs policy text from vetted source clauses, retaining source wording and action order. Both source notes and trusted author decisions remain attached to their immutable generation snapshot. Conflicting alternatives are withheld and cited in a blocking question; vague acknowledgements cannot settle them. A source-only actor excerpt supplies the step owner when identified. A rewrite changes its selected section, retaining every other authored field exactly.
-
-Acceptance reconstructs and compares content, questions, citations, and certified conflict resolutions against the original evidence. Edited or outdated proposals require regeneration. Each request is bounded to 100 source sentences, two transient-failure attempts, and 90 seconds; cancellation aborts provider work. Human review must still check factual accuracy, source completeness, useful section placement, and procedure usability. Before using real employee information, verify provider retention/training settings and your organization's agreement. Those settings have not been established by this implementation.
-
-The corrective evaluation uses 30 diverse office/HR inputs and six section rewrites, with literal critical-fact, citation, conflict, hostile-command, and non-target preservation checks. Historical failures are retained independently of current reports. Exact provider responses and the two-reviewer rubric are indexed in `.qa/AI_FIDELITY_REVIEW.md`; current convenience reports are `.qa/ai-evaluation.json` and `.qa/ai-rewrites.json`. Production AI is disabled by default, even when a provider key is present. Explicit `AI_DISABLED=false` is required after independent operations/HR and product reviews, usability review, and provider privacy terms are confirmed. Those human approvals remain pending.
-
-The corrected `office-sop-v5` / `evidence-layout-v4` live run passed all 36 cases on their first attempts and all 649 bounded assertions. Measured p95 generation latency was 1.42 seconds for drafts and 0.74 seconds for section rewrites. The final local test/build verification passed 78 tests, including all eight rewrite targets, accepted-evidence persistence, and checkpoint recovery with complete provenance. These measurements establish the tested cases; they do not certify every possible input or replace human review.
-
-Four additional live edge cases passed all 66 assertions: a mixed negative policy and hostile command, an invalid conflict acknowledgement, conflicting source and authored deadlines, and pasted numbered/bulleted notes. The combined fresh evaluation passed 40 of 40 cases and 715 assertions. Offline evaluator controls also reject changed facts, citations, order, negation, unsafe commands, false gaps, and unintended section changes.
-
-Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, and `MAIL_FROM` for actual email. Without SMTP, development displays explicit local verification/reset/invitation links and stores a local outbox. Production refuses to start without SMTP and never returns these links in API responses. Production delivery has not been verified with a live email account.
-
-## Deploy
-
-Run a **single Node application instance with a persistent local volume**; SQLite workspace transactions serialize writes. Use a VPS or container host, HTTPS reverse proxy, encrypted disk/volume, and off-host encrypted backup storage. An ephemeral serverless filesystem is unsuitable. Horizontal replication requires a database migration, not multiple containers sharing this file.
-
-```sh
-docker build -t sopeasy .
-docker run --env-file production.env -p 4197:4197 -v sopeasy-data:/data sopeasy
+```bash
+npm run verify
 ```
 
-Use [production.env.example](production.env.example) as the configuration template. `production.env` must set `NODE_ENV=production`, `DEMO_MODE=false`, `HOST=0.0.0.0`, an HTTPS `APP_URL`, and SMTP credentials. Keep secrets outside the image. The volume must be writable by the container's `node` user. Terminate TLS at your proxy. HTTPS cookies, same-origin mutation checks, and production CSP are applied by the server. Keep `AI_DISABLED=true` until the PRD evaluation and privacy gates are reviewed.
+The test suite covers permissions, review and publication rules, versioned receipts, concurrent edits, AI validation, cancellation, stale proposals, checkpoint recovery and exports. [GitHub Actions](.github/workflows/verify.yml) also builds and starts the actual Docker image to check backend readiness.
 
-Build artifacts are served by the same authenticated server. `/api/health` verifies database access. The application is running locally; no production site has been provisioned or deployed. Docker packaging has been provided; a Docker image build has not been executed in this environment.
+For AI fixture evaluation, run `node scripts/evaluate-ai.mjs --list` or `--self-test`. Add `--live` to call the configured provider; live evaluation uses your provider credits. `--replay <report.json>` checks a saved evaluation without new provider calls.
 
-## Backup, restoration, and retention
+## Deployment status
 
-`npm run backup` uses SQLite `VACUUM INTO`, then verifies the backup with `PRAGMA integrity_check`. Automatic backups use the same snapshot mechanism. Copy completed backups to encrypted off-host storage. Local backups alone do not protect against loss of the computer or volume.
+The hosted app is a **sample-data review sandbox**. Each browser gets an isolated workspace with fictional roles; it does not provide a shared company workspace or authenticate employees.
 
-To restore, stop the application, preserve the current `DATA_DIR`, move its database and associated `-wal`/`-shm` files into a separate recovery folder, and copy a verified backup to `DATA_DIR/sopeasy.sqlite`. Start the app and confirm membership, current versions, and receipts. Restore is an operator action; do not replace a live database. The tests restore a separate snapshot and compare stored records.
+- Gemini is enabled on the hosted backend; email and account flows are disabled in the review build.
+- Sandboxes expire after three days. Free Render storage can also reset on restarts or deployments.
+- The backend may take time to wake after inactivity. Use fictional notes only.
 
-Deletion disables the workspace for seven days. After expiry, a maintenance job deletes its active records and stores only its workspace ID, completion action, and timestamp. Generated PDFs/CSV are delivered directly rather than left as public files. Cancelled/failed proposals and local outbox records expire after 30 days. Daily backups expire after 30 days; deploy operators must apply the same retention to off-host copies.
+For real company use, deploy with authentication enabled, configure email delivery, attach durable storage and verify off-host backup restoration. Use [production.env.example](production.env.example) and the [deployment guide](REVIEW-DEPLOYMENT.md).
 
-## Data model and export contract
+## Project guide
 
-SQLite holds normalized identities, memberships, sessions, tokens, invitations, outbox, and lifecycle records. Each workspace owns a transactionally updated JSON state containing procedures, candidates, checkpoints, submissions/approvals, immutable versions, assignments, receipts, proposals, notifications, maintenance records, and audit events. Authorization is evaluated again inside mutations. This intentionally suits the PRD's initial pilot envelope.
+| Path                   | Purpose                                               |
+| ---------------------- | ----------------------------------------------------- |
+| `src/`                 | React interface and shared visual styles              |
+| `server/domain.mjs`    | Procedure lifecycle and business rules                |
+| `server/app.mjs`       | API routes, access checks and transactions            |
+| `server/grounding.mjs` | Evidence-based AI layout and validation               |
+| `server/db.mjs`        | SQLite persistence                                    |
+| `tests/`               | Domain, API, provider and regression tests            |
+| `scripts/`             | AI evaluation, benchmarks and verified SQLite backups |
 
-Workspace JSON exports use `sopeasy-workspace-v1`. Dates are UTC ISO strings, identifiers are UUIDs, published version numbers start at 1, and receipt records bind the membership and exact version. Passwords, session tokens, and provider keys are excluded. CSV reports contain procedure, version, recipient, state, deadline, and receipt time; formula prefixes are escaped. PDF footers include version, page number, and a sign-in-required current-library link.
-
-## Remaining release validation
-
-The implementation is ready to explore locally and to deploy into a configured staging environment. Production onboarding still needs live SMTP verification, hosting/TLS/encrypted-volume setup, provider agreement confirmation, two-person HR/product review of the 30-case AI report, staging load/accessibility review, and off-host recovery rehearsal. Local measurements do not establish the PRD's ten-user broadband or monthly availability targets. Billing, SSO, external HR integrations, process execution, and native mobile apps remain outside the agreed P0 scope.
+Read [PRODUCT.md](PRODUCT.md) for the audience and constraints, [DESIGN.md](DESIGN.md) for the visual system, and [IMPLEMENTATION.md](IMPLEMENTATION.md) for implementation details and release checks. `npm run backup` creates and verifies a local SQLite snapshot; real deployments also need off-host backup storage. Private credentials, databases and `.qa/` reports are excluded from Git.
