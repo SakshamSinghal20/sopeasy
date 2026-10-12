@@ -263,17 +263,17 @@ function ProcessGraphic({ compact = false }) {
           className="process-path"
           d="M72 117H204Q222 117 222 99V65Q222 47 240 47H359M222 99V163Q222 181 240 181H359"
           fill="none"
-          stroke="#cdd4c3"
+          stroke="var(--border-control)"
           strokeWidth="1.4"
         />
-        <circle className="signal signal-one" r="3" fill="#7c9171">
+        <circle className="signal signal-one" r="3" fill="var(--ink)">
           <animateMotion
             dur="5s"
             repeatCount="indefinite"
             path="M72 117H204Q222 117 222 99V65Q222 47 240 47H359"
           />
         </circle>
-        <circle className="signal signal-two" r="3" fill="#b77b55">
+        <circle className="signal signal-two" r="3" fill="var(--ink)">
           <animateMotion
             dur="6s"
             repeatCount="indefinite"
@@ -287,13 +287,13 @@ function ProcessGraphic({ compact = false }) {
             width="126"
             height="70"
             rx="10"
-            fill="#fffefb"
-            stroke="#dfe3d7"
+            fill="var(--paper)"
+            stroke="var(--line)"
           />
-          <rect x="40" y="98" width="25" height="31" rx="3" fill="#edf0e5" />
+          <rect x="40" y="98" width="25" height="31" rx="3" fill="var(--mint)" />
           <path
             d="M46 107h13M46 112h13M46 117h8"
-            stroke="#74856b"
+            stroke="var(--ink)"
             strokeWidth="1.3"
           />
           <text x="77" y="113">
@@ -304,12 +304,19 @@ function ProcessGraphic({ compact = false }) {
           </text>
         </g>
         <g className="graphic-review">
-          <rect x="281" y="15" width="144" height="66" rx="10" fill="#edf0e5" />
-          <circle cx="305" cy="45" r="13" fill="#dce5d2" />
+          <rect
+            x="281"
+            y="15"
+            width="144"
+            height="66"
+            rx="10"
+            fill="var(--mint)"
+          />
+          <circle cx="305" cy="45" r="13" fill="var(--paper)" />
           <path
             d="m299 45 4 4 8-8"
             fill="none"
-            stroke="#5d7650"
+            stroke="var(--ink)"
             strokeWidth="1.8"
           />
           <text x="328" y="42">
@@ -326,13 +333,13 @@ function ProcessGraphic({ compact = false }) {
             width="144"
             height="66"
             rx="10"
-            fill="#f2e7de"
+            fill="var(--sky)"
           />
-          <circle cx="305" cy="179" r="13" fill="#ead4c3" />
+          <circle cx="305" cy="179" r="13" fill="var(--paper)" />
           <path
             d="M299 179h12m-5-5 5 5-5 5"
             fill="none"
-            stroke="#986648"
+            stroke="var(--ink)"
             strokeWidth="1.6"
           />
           <text x="328" y="175">
@@ -342,8 +349,14 @@ function ProcessGraphic({ compact = false }) {
             One current version
           </text>
         </g>
-        <circle cx="222" cy="115" r="7" fill="#f7f7f2" stroke="#96a28a" />
-        <circle cx="222" cy="115" r="2" fill="#6f845f" />
+        <circle
+          cx="222"
+          cy="115"
+          r="7"
+          fill="var(--paper)"
+          stroke="var(--border-control)"
+        />
+        <circle cx="222" cy="115" r="2" fill="var(--ink)" />
       </svg>
     </div>
   );
