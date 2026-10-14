@@ -15,7 +15,7 @@ Implement the complete document lifecycle in ../docs/sopeasy/PRD.md. The user au
 Persistent server-owned documents, source-grounded generation, editor, review, immutable publication, version-bound acknowledgements, keyword library, membership, notifications, exports, maintenance and archive. English, text-first, internal workspaces. Never turn a draft into approved instructions without a second eligible human. External AI/email credentials and deployment configuration must be reported accurately.
 
 ## Brand Commitments
-SOPEasy. Apply the SOPEasy palette, Space Grotesk headings and Inter body text. Keep Home, Procedures, My tasks and Reviews as the primary navigation. Use plain writing, purposeful motion and the authored process graphic. No invented business results or testimonials.
+Use the SOPEasy palette defined in DESIGN.md, Space Grotesk headings and Inter body text. Keep Home, Procedures, My tasks and Reviews as the primary navigation. Use plain writing, purposeful motion and the authored process graphic. No invented business results or testimonials.
 
 ## Evidence on Hand
 The complete PRD and the confirmed audience. Seeded demonstration documents and people must be labeled demonstration data and kept distinct from new user workspaces.

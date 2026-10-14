@@ -26,7 +26,7 @@ Changes start a new working revision. The published version remains available wh
 - Search, reading assignments, maintenance dates, archive and restoration.
 - PDF export, acknowledgement CSV and workspace JSON export.
 
-The interface keeps **Home, Procedures, My tasks and Reviews** visible. Secondary tools sit under **More**. the SOPEasy palette, Space Grotesk headings and Inter body text carry through desktop and mobile.
+The interface keeps **Home, Procedures, My tasks and Reviews** visible. Secondary tools sit under **More**. Restrained pastel colors, Space Grotesk headings and Inter body text carry through desktop and mobile.
 
 ## Engineering approach
 
